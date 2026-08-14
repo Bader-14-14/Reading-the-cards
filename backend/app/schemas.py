@@ -10,3 +10,11 @@ class ParseResult(BaseModel):
 class ExportRequest(BaseModel):
     data: Dict[str, str]
     format: str  # 'word' or 'excel'
+
+
+from typing import List
+
+
+class BatchExportRequest(BaseModel):
+    data: List[Dict[str, str]]
+    format: str
