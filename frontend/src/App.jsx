@@ -10,12 +10,27 @@ export default function App() {
   const [editableList, setEditableList] = useState([])
   const [loading, setLoading] = useState(false)
   const [cameraOpen, setCameraOpen] = useState(false)
+  const [enhanceBefore, setEnhanceBefore] = useState(true)
+  const [saveLogs, setSaveLogs] = useState(false)
+  const [backendUrl, setBackendUrl] = useState(localStorage.getItem('backendUrl') || 'http://localhost:8000')
+  const [qrOpen, setQrOpen] = useState(false)
 
   async function onParse(e) {
     if (!files || files.length === 0) return
     setLoading(true)
-    const res = await parseImages(files, documentType, provider)
-    // res is array of {filename, data}
+    let useFiles = files
+    if (enhanceBefore){
+      const enhanced = []
+      for (const f of files){
+        try{ const ef = await enhanceImage(f); enhanced.push(ef) }catch(e){ enhanced.push(f) }
+      }
+      useFiles = enhanced
+    }
+    const res = []
+    for (const f of useFiles){
+      const r = await parseImage(f, documentType, provider, saveLogs)
+      res.push(r)
+    }
     setResults(res)
     setEditableList(res.map(r => r.data))
     setLoading(false)
@@ -37,6 +52,10 @@ export default function App() {
       <div className="controls">
         <input type="file" accept="image/*" multiple onChange={e => setFiles(Array.from(e.target.files))} />
         <button onClick={() => setCameraOpen(true)}>استخدام الكاميرا</button>
+        <label style={{marginLeft:8}}><input type="checkbox" checked={enhanceBefore} onChange={e => setEnhanceBefore(e.target.checked)} /> تحسين تلقائي قبل الإرسال</label>
+        <label style={{marginLeft:8}}><input type="checkbox" checked={saveLogs} onChange={e => setSaveLogs(e.target.checked)} /> حفظ السجل على الخادم</label>
+        <input style={{marginLeft:8,width:220}} value={backendUrl} onChange={e => setBackendUrl(e.target.value)} />
+        <button onClick={() => { localStorage.setItem('backendUrl', backendUrl); setQrOpen(true) }}>عرض QR للخادم</button>
         <select value={documentType} onChange={e => setDocumentType(e.target.value)}>
           <option value="id">هوية</option>
           <option value="license">رخصة قيادة</option>
@@ -52,6 +71,17 @@ export default function App() {
 
       {cameraOpen && (
         <CameraCapture onCapture={(file) => { setFiles([file]); setCameraOpen(false); setTimeout(() => onParse(), 200) }} onClose={() => setCameraOpen(false)} />
+      )}
+      {qrOpen && (
+        <div className="camera-modal" onClick={() => setQrOpen(false)}>
+          <div className="camera-container" onClick={e => e.stopPropagation()}>
+            <h3>Scan this QR to set backend URL</h3>
+            <img src={`https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(backendUrl)}`} alt="qr" />
+            <div style={{marginTop:8}}>
+              <button onClick={() => setQrOpen(false)}>إغلاق</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {results && results.length > 0 && (

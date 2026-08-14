@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 import os
 import uuid
 from .ocr_providers import parse_document
+from .logging_service import save_log, list_logs, read_log
 from .exporter import create_word, create_excel
 
 app = FastAPI(title="قراءة البطاقات - API")
@@ -17,13 +18,35 @@ async def root():
 
 
 @app.post("/parse")
-async def parse(file: UploadFile = File(...), document_type: str = 'id', provider: str = 'azure'):
+async def parse(file: UploadFile = File(...), document_type: str = 'id', provider: str = 'azure', save_log: bool = False):
     data = await file.read()
     try:
         parsed = parse_document(document_type, data, provider=provider)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    if save_log:
+        try:
+            save_log(data, parsed, orig_filename=file.filename)
+        except Exception:
+            pass
     return {"filename": file.filename, "data": parsed}
+
+
+@app.get('/logs')
+async def get_logs():
+    return {'logs': list_logs()}
+
+
+@app.get('/logs/{name}')
+async def get_log(name: str):
+    item = read_log(name)
+    if item is None:
+        raise HTTPException(status_code=404, detail='not found')
+    # if JSON metadata, return JSON
+    if isinstance(item, dict):
+        return item
+    # else return file response for image
+    return FileResponse(item, filename=name)
 
 
 from .schemas import ExportRequest
