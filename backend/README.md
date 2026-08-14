@@ -31,4 +31,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ملاحظات:
 - إذا أردت دعم لغات أفضل في Tesseract، ثبت حزم اللغة المناسبة (Arabic) وأضف `ara` إلى معامل `lang` في `ocr_providers.py`.
+ - إذا أردت دعم لغات أفضل في Tesseract، ثبت حزم اللغة المناسبة (Arabic) وأضف `ara` إلى معامل `lang` في `ocr_providers.py`.
+   على Windows يمكن تثبيت بيانات اللغة بإضافة ملف `ara.traineddata` إلى مجلد tessdata الخاص بتثبيت Tesseract.
+ - الميزة الجديدة تدعم تحسين الصورة محلياً (contrast/unsharp) قبل الإرسال، ويدعم الخادم حفظ السجلات في `backend/logs/`.
 - ملف المشروع تمّ دفعه إلى المستودع: https://github.com/Bader-14-14/Reading-the-cards.git

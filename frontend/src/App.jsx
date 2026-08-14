@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { parseImage, parseImages, exportData, exportAggregate } from './api'
+import { parseImage, parseImages, exportData, exportAggregate, getLogs } from './api'
 import CameraCapture from './CameraCapture'
+import Logs from './Logs'
 
 export default function App() {
   const [files, setFiles] = useState([])
@@ -14,6 +15,7 @@ export default function App() {
   const [saveLogs, setSaveLogs] = useState(false)
   const [backendUrl, setBackendUrl] = useState(localStorage.getItem('backendUrl') || 'http://localhost:8000')
   const [qrOpen, setQrOpen] = useState(false)
+  const [view, setView] = useState('main')
 
   async function onParse(e) {
     if (!files || files.length === 0) return
@@ -49,7 +51,12 @@ export default function App() {
   return (
     <div className="container">
       <h1>قراءة البطاقات</h1>
-      <div className="controls">
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div>
+          <button onClick={() => setView('main')}>الواجهة</button>
+          <button onClick={() => setView('logs')}>السجلات</button>
+        </div>
+        <div className="controls">
         <input type="file" accept="image/*" multiple onChange={e => setFiles(Array.from(e.target.files))} />
         <button onClick={() => setCameraOpen(true)}>استخدام الكاميرا</button>
         <label style={{marginLeft:8}}><input type="checkbox" checked={enhanceBefore} onChange={e => setEnhanceBefore(e.target.checked)} /> تحسين تلقائي قبل الإرسال</label>
@@ -84,7 +91,10 @@ export default function App() {
         </div>
       )}
 
-      {results && results.length > 0 && (
+      {view === 'logs' ? (
+        <Logs />
+      ) : (
+        results && results.length > 0 && (
         <div className="result">
           <h2>مراجعة وتحرير النتائج ({results.length})</h2>
           {results.map((r, idx) => (

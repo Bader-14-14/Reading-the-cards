@@ -15,6 +15,21 @@ export async function parseImage(file, documentType='id', provider='azure', save
   return resp.json()
 }
 
+export async function getLogs(){
+  const resp = await fetch(getBaseUrl() + '/logs')
+  if (!resp.ok) throw new Error('failed')
+  return resp.json()
+}
+
+export async function getLog(name){
+  const resp = await fetch(getBaseUrl() + '/logs/' + encodeURIComponent(name))
+  if (!resp.ok) throw new Error('failed')
+  const ct = resp.headers.get('content-type') || ''
+  if (ct.startsWith('application/json')) return resp.json()
+  // otherwise return image url
+  return getBaseUrl() + '/logs/' + encodeURIComponent(name)
+}
+
 export async function parseImages(files, documentType='id', provider='azure'){
   const results = []
   for (const f of files){

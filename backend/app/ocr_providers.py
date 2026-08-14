@@ -18,10 +18,14 @@ def detect_text_tesseract(image_bytes: bytes) -> str:
         raise RuntimeError('pytesseract not installed')
     img = _image_from_bytes(image_bytes)
     # Use both English and Arabic if available
+    # prefer Arabic+English traineddata; fallback to default if not installed
     try:
-        text = pytesseract.image_to_string(img, lang='eng+ara')
+        text = pytesseract.image_to_string(img, lang='ara+eng')
     except Exception:
-        text = pytesseract.image_to_string(img)
+        try:
+            text = pytesseract.image_to_string(img, lang='eng+ara')
+        except Exception:
+            text = pytesseract.image_to_string(img)
     return text
 
 
