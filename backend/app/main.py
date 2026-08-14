@@ -7,7 +7,7 @@ from .exporter import create_word, create_excel
 
 app = FastAPI(title="قراءة البطاقات - API")
 
-TMP_DIR = os.path.join(os.path.dirname(__file__), '..', 'tmp')
+TMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'tmp'))
 os.makedirs(TMP_DIR, exist_ok=True)
 
 
@@ -26,14 +26,18 @@ async def parse(file: UploadFile = File(...), document_type: str = 'id', provide
     return {"filename": file.filename, "data": parsed}
 
 
+from .schemas import ExportRequest
+
+
 @app.post("/export")
-async def export(format: str, data: dict):
-    # format: 'word' or 'excel'
+async def export(req: ExportRequest):
+    data = req.data
+    fmt = req.format.lower()
     fname = f"export_{uuid.uuid4().hex}"
-    if format == 'word':
+    if fmt == 'word':
         out_path = os.path.join(TMP_DIR, fname + '.docx')
         create_word(data, out_path)
-    elif format == 'excel':
+    elif fmt == 'excel':
         out_path = os.path.join(TMP_DIR, fname + '.xlsx')
         create_excel(data, out_path)
     else:

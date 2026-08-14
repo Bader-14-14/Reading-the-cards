@@ -6,6 +6,7 @@ export default function App() {
   const [documentType, setDocumentType] = useState('id')
   const [provider, setProvider] = useState('azure')
   const [result, setResult] = useState(null)
+  const [editable, setEditable] = useState(null)
   const [loading, setLoading] = useState(false)
 
   async function onParse(e) {
@@ -13,12 +14,13 @@ export default function App() {
     setLoading(true)
     const res = await parseImage(file, documentType, provider)
     setResult(res)
+    setEditable(res.data)
     setLoading(false)
   }
 
   async function onExport(format) {
-    if (!result) return
-    await exportData(result.data, format)
+    if (!editable) return
+    await exportData(editable, format)
   }
 
   return (
@@ -39,10 +41,17 @@ export default function App() {
         <button onClick={onParse} disabled={loading}>{loading ? 'جارٍ...' : 'اقرأ'}</button>
       </div>
 
-      {result && (
+      {result && editable && (
         <div className="result">
-          <h2>النتائج</h2>
-          <pre>{JSON.stringify(result.data, null, 2)}</pre>
+          <h2>مراجعة وتحرير الحقول</h2>
+          <div className="fields">
+            {Object.keys(editable).map(key => (
+              <div key={key} style={{marginBottom:8}}>
+                <label style={{display:'block',fontWeight:600}}>{key}</label>
+                <input value={editable[key] || ''} onChange={e => setEditable({...editable, [key]: e.target.value})} style={{width:'100%'}} />
+              </div>
+            ))}
+          </div>
           <div className="exports">
             <button onClick={() => onExport('word')}>حفظ Word</button>
             <button onClick={() => onExport('excel')}>حفظ Excel</button>
