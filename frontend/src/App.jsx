@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { parseImage, exportData } from './api'
+import { parseImage, parseImages, exportData, exportAggregate } from './api'
+import CameraCapture from './CameraCapture'
 
 export default function App() {
   const [files, setFiles] = useState([])
@@ -8,6 +9,7 @@ export default function App() {
   const [results, setResults] = useState([]) // parsed results list
   const [editableList, setEditableList] = useState([])
   const [loading, setLoading] = useState(false)
+  const [cameraOpen, setCameraOpen] = useState(false)
 
   async function onParse(e) {
     if (!files || files.length === 0) return
@@ -34,6 +36,7 @@ export default function App() {
       <h1>قراءة البطاقات</h1>
       <div className="controls">
         <input type="file" accept="image/*" multiple onChange={e => setFiles(Array.from(e.target.files))} />
+        <button onClick={() => setCameraOpen(true)}>استخدام الكاميرا</button>
         <select value={documentType} onChange={e => setDocumentType(e.target.value)}>
           <option value="id">هوية</option>
           <option value="license">رخصة قيادة</option>
@@ -46,6 +49,10 @@ export default function App() {
         </select>
         <button onClick={onParse} disabled={loading}>{loading ? 'جارٍ...' : 'اقرأ'}</button>
       </div>
+
+      {cameraOpen && (
+        <CameraCapture onCapture={(file) => { setFiles([file]); setCameraOpen(false); setTimeout(() => onParse(), 200) }} onClose={() => setCameraOpen(false)} />
+      )}
 
       {results && results.length > 0 && (
         <div className="result">

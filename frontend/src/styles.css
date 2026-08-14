@@ -3,3 +3,6 @@ body{font-family: Arial, Helvetica, sans-serif; padding:20px;}
 .controls{display:flex;gap:8px;align-items:center}
 .result{margin-top:16px;background:#f7f7f7;padding:12px;border-radius:6px}
 pre{white-space:pre-wrap}
+
+.camera-modal{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:40}
+.camera-container{background:#fff;padding:12px;border-radius:8px;max-width:90%;width:480px}
