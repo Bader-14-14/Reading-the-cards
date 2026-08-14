@@ -1,4 +1,12 @@
+.venv/
 __pycache__/
+*.py[cod]
+
+backend/stderr.txt
+backend/stdout.txt
+backend/test_crop.png
+backend/diag_ocr.py
+backend/tessdata/__pycache__/
 *.pyc
 .env
 venv/

@@ -1,7 +1,7 @@
 import os
 import io
 import requests
-from PIL import Image
+from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 
 try:
     import pytesseract
@@ -13,19 +13,49 @@ def _image_from_bytes(b):
     return Image.open(io.BytesIO(b))
 
 
+def _preprocess_image(img: Image.Image) -> Image.Image:
+    """Conservative preprocessing to improve OCR quality on Saudi ID cards."""
+    img = img.convert('RGB')
+    width, height = img.size
+    if max(width, height) < 1600:
+        scale = 2.0
+        img = img.resize((int(width * scale), int(height * scale)), Image.Resampling.LANCZOS)
+
+    img = ImageOps.grayscale(img)
+    img = ImageOps.autocontrast(img)
+    img = ImageEnhance.Contrast(img).enhance(2.2)
+    img = img.filter(ImageFilter.SHARPEN)
+
+    width, height = img.size
+    if max(width, height) > 2200:
+        scale = 2200 / max(width, height)
+        img = img.resize((int(width * scale), int(height * scale)), Image.Resampling.LANCZOS)
+
+    # Binarize with a moderate threshold for printed ID cards.
+    img = img.point(lambda p: 255 if p > 180 else 0)
+    return img
+
+
 def detect_text_tesseract(image_bytes: bytes) -> str:
     if pytesseract is None:
         raise RuntimeError('pytesseract not installed')
     img = _image_from_bytes(image_bytes)
-    # Use both English and Arabic if available
-    # prefer Arabic+English traineddata; fallback to default if not installed
     try:
-        text = pytesseract.image_to_string(img, lang='ara+eng')
-    except Exception:
+        if os.name == 'nt':
+            possible = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            if os.path.exists(possible):
+                pytesseract.pytesseract.tesseract_cmd = possible
+
+        processed = _preprocess_image(img)
         try:
-            text = pytesseract.image_to_string(img, lang='eng+ara')
+            text = pytesseract.image_to_string(processed, lang='ara+eng', config='--psm 6')
         except Exception:
-            text = pytesseract.image_to_string(img)
+            try:
+                text = pytesseract.image_to_string(processed, lang='eng+ara', config='--psm 6')
+            except Exception:
+                text = pytesseract.image_to_string(processed, config='--psm 6')
+    except Exception:
+        raise
     return text
 
 
