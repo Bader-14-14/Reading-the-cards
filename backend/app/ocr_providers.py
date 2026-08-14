@@ -43,8 +43,11 @@ def detect_text_azure(image_bytes: bytes) -> str:
     return '\n'.join(lines)
 
 
+from .parsers import parse_id, parse_license, parse_vehicle, parse_residency
+
+
 def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azure') -> dict:
-    """Return parsed fields for the given document type.
+    """Return parsed fields for the given document type using OCR then heuristics.
     provider: 'azure' | 'local'
     """
     text = ''
@@ -57,17 +60,13 @@ def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azur
             # fallback to local if azure fails
             text = detect_text_tesseract(image_bytes)
 
-    # very naive extraction: return raw_text and placeholders
-    result = {'raw_text': text}
     if document_type == 'id':
-        result.update({'name': '', 'id_number': '', 'dob': ''})
+        return parse_id(text)
     elif document_type == 'license':
-        result.update({'name': '', 'license_number': '', 'expiry': ''})
+        return parse_license(text)
     elif document_type == 'vehicle':
-        result.update({'plate': '', 'owner': ''})
+        return parse_vehicle(text)
     elif document_type == 'residency':
-        result.update({'name': '', 'iqama_number': '', 'nationality': ''})
+        return parse_residency(text)
     else:
-        # generic
-        result.update({'fields': {}})
-    return result
+        return {'raw_text': text}
