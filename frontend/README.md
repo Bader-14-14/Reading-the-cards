@@ -1,3 +1,11 @@
-Frontend placeholder
+Frontend (React + Vite)
 
-سنستخدم React لإنشاء واجهة ويب لتحميل الصور، مراجعتها، واختيار الصيغة (Word/Excel) للحفظ.
+Installation:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend expects the backend running at `http://localhost:8000`.
