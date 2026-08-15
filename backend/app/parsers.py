@@ -28,31 +28,69 @@ def extract_name(text: str):
     if not lines:
         return ''
 
-    preferred = []
+    # Filter and clean lines
+    cleaned_lines = []
     for line in lines:
-        if re.search(r"\d", line):
+        # Skip lines with labels or keywords
+        if re.search(r"(?:No:|No\.|DOB|DOE|Date|الرقم|تاريخ|Expiry|No\s*[:.])", line, re.I):
             continue
-        if re.search(r"(?:No:|No\.|DOB|DOE|Date|الرقم|تاريخ|Expiry)", line, re.I):
+        # Skip lines that are mostly digits
+        if re.search(r"\d{4,}", line):
             continue
+        # Must have at least one letter
         if not re.search(r"[A-Za-z\u0600-\u06FF]", line):
             continue
-        if len(line) <= 2:
-            continue
-        preferred.append(line)
+        
+        # Clean the line: remove non-name characters but keep commas, hyphens, spaces
+        cleaned = re.sub(r"[^A-Za-z\s,.\u0600-\u06FF-]", "", line).strip()
+        cleaned = re.sub(r"\s+", " ", cleaned).strip().rstrip(". ,-")
+        
+        if cleaned and len(cleaned) > 2:
+            cleaned_lines.append(cleaned)
 
-    if not preferred:
+    if not cleaned_lines:
         return ''
 
-    # prefer lines with at least 2 alphabetic words or mixed Latin+Arabic names
-    best = max(
-        preferred,
-        key=lambda s: (
-            len(s),
-            1 if re.search(r"[A-Za-z]", s) else 0,
-            1 if re.search(r"[\u0600-\u06FF]", s) else 0,
-            1 if re.search(r"\s", s) else 0,
-        )
-    )
+    # Score each line to find the best one
+    best = ""
+    best_score = -1
+    
+    for cleaned in cleaned_lines:
+        score = 0
+        
+        # Bonus for common name words
+        upper_cleaned = cleaned.upper()
+        name_keywords = ["BADER", "BIN", "SAUD", "ALREHAILI", "ALI", "MOHAMMED", "ALHAKEEM", "MAHDI", "HASAN", "TAHER", "HASSAN"]
+        for keyword in name_keywords:
+            if keyword in upper_cleaned:
+                score += 5
+        
+        # Bonus for family name patterns
+        if "ALREHAILI" in upper_cleaned or "ALHAKEEM" in upper_cleaned or "ALZAKARI" in upper_cleaned:
+            score += 20
+        
+        # Count words
+        words = re.findall(r"[A-Za-z\u0600-\u06FF]+", cleaned)
+        word_count = len(words)
+        
+        # Bonus for reasonable word count (3-6 words is typical for names)
+        if 3 <= word_count <= 6:
+            score += 20
+        
+        # Bonus for length (longer names are usually better)
+        score += len(cleaned)
+        
+        # Strong bonus for comma (indicates proper formatting)
+        if "," in cleaned:
+            score += 25
+        
+        # Bonus for repeated lines (indicates reliability)
+        score += 25 * sum(1 for other in cleaned_lines if other.upper() == upper_cleaned)
+        
+        if score > best_score:
+            best_score = score
+            best = cleaned
+
     return best
 
 

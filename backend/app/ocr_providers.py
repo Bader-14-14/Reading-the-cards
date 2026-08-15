@@ -78,6 +78,7 @@ def detect_text_azure(image_bytes: bytes) -> str:
 
 
 from .parsers import parse_id, parse_license, parse_vehicle, parse_residency
+from .saudi_id_extractor import extract_saudi_id
 
 
 def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azure') -> dict:
@@ -104,3 +105,17 @@ def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azur
         return parse_residency(text)
     else:
         return {'raw_text': text}
+
+
+def parse_document_saudi_id(image_bytes: bytes, language: str = 'ar') -> dict:
+    """
+    Extract fields from Saudi ID card using region-based OCR.
+    
+    Args:
+        image_bytes: Raw image data
+        language: 'ar' for Arabic name, 'en' for English name
+    
+    Returns:
+        Dictionary with extracted fields: name, id_number, dob, doe, raw_text
+    """
+    return extract_saudi_id(image_bytes, language=language)

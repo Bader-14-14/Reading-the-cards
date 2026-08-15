@@ -1,8 +1,8 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.responses import FileResponse
 import os
 import uuid
-from .ocr_providers import parse_document
+from .ocr_providers import parse_document, parse_document_saudi_id
 from .logging_service import save_log, list_logs, read_log
 from .exporter import create_word, create_excel
 
@@ -30,6 +30,27 @@ async def parse(file: UploadFile = File(...), document_type: str = 'id', provide
         except Exception:
             pass
     return {"filename": file.filename, "data": parsed}
+
+
+@app.post("/extract-saudi-id")
+async def extract_saudi_id(file: UploadFile = File(...), language: str = Query('ar', description='Language for name extraction: ar or en')):
+    """
+    Extract fields from Saudi ID card using advanced region-based OCR.
+    
+    Args:
+        file: Image file upload
+        language: 'ar' for Arabic name, 'en' for English name
+    
+    Returns:
+        Extracted fields: name, id_number, dob, doe, raw_text
+    """
+    data = await file.read()
+    try:
+        parsed = parse_document_saudi_id(data, language=language)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"filename": file.filename, "language": language, "data": parsed}
 
 
 @app.get('/logs')
