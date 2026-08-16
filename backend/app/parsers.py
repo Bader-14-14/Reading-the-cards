@@ -9,6 +9,7 @@ _NATIONALITY_EN = {
     "الهند": "India",
     "باكستان": "Pakistan",
     "بنغلاديش": "Bangladesh",
+    "بنجلاديش": "Bangladesh",
     "الفلبين": "Philippines",
     "مصر": "Egypt",
     "السودان": "Sudan",
@@ -30,21 +31,16 @@ def _extract_labeled_value(text: str, labels: list[str]) -> str:
                 rf"{re.escape(label)}\s*(?:[:：-]\s*)?(.*)$", line,
                 re.IGNORECASE,
             )
-            if not match:
-                label_match = re.search(re.escape(label), line, re.IGNORECASE)
-                if label_match:
-                    before_label = line[:label_match.start()].strip(" :-：")
-                    if before_label:
-                        return before_label
-                continue
-            value = match.group(1).strip(" :-：")
-            if value:
-                return value
             label_match = re.search(re.escape(label), line, re.IGNORECASE)
             if label_match:
                 before_label = line[:label_match.start()].strip(" :-：")
                 if before_label:
                     return before_label
+            if not match:
+                continue
+            value = match.group(1).strip(" :-：")
+            if value:
+                return value
             for next_line in lines[index + 1:]:
                 if next_line:
                     return next_line.strip(" :-：")
@@ -52,13 +48,56 @@ def _extract_labeled_value(text: str, labels: list[str]) -> str:
 
 
 def _extract_labeled_date(text: str, labels: list[str]) -> str:
+    date_pattern = r"[0-9٠-٩]{1,4}[/-][0-9٠-٩]{1,2}[/-][0-9٠-٩]{1,4}"
+    for label in labels:
+        direct = re.search(
+            rf"{re.escape(label)}\s*[:：-]?\s*({date_pattern})",
+            text,
+            re.IGNORECASE,
+        )
+        if direct:
+            return normalize_digits(direct.group(1))
     value = _extract_labeled_value(text, labels)
-    match = re.search(r"[0-9٠-٩]{1,4}[/-][0-9٠-٩]{1,2}[/-][0-9٠-٩]{1,4}", value)
+    match = re.search(date_pattern, value)
     return normalize_digits(match.group(0)) if match else ""
+
+
+def _extract_iqama_nationality(text: str) -> str:
+    previous = ""
+    for line in text.splitlines():
+        rtl_match = re.search(r"([\u0600-\u06ff]+)\s+الجنسية", line)
+        if rtl_match:
+            return rtl_match.group(1)
+        if "الجنسية" in line:
+            before = line.split("الجنسية", 1)[0].strip(" :：-")
+            if before:
+                words = re.findall(r"[\u0600-\u06ff]+", before)
+                if words:
+                    return words[-1]
+            if previous:
+                return previous
+        previous_words = re.findall(r"^[ء-ي]+$", line.strip())
+        if previous_words:
+            previous = previous_words[-1]
+    match = re.search(r"Nationality\s*[:：-]?\s*([A-Za-z]+)", text, re.IGNORECASE)
+    return match.group(1) if match else ""
 
 
 def _extract_iqama_name(text: str) -> str:
     """Prefer the resident name printed above the Iqama fields."""
+    lines = [item.strip() for item in text.splitlines() if item.strip()]
+    header_seen = False
+    for line in lines:
+        if "هوية مقيم" in line or "مقيم هوية" in line:
+            header_seen = True
+            continue
+        if not header_seen:
+            continue
+        arabic_words = re.findall(r"[\u0600-\u06ff]+", line)
+        english_words = re.findall(r"[A-Za-z]+", line)
+        if len(arabic_words) >= 3 and len(english_words) >= 3:
+            return " ".join(arabic_words)
+
     labeled_name = _extract_labeled_value(
         text,
         [
@@ -90,7 +129,7 @@ def _extract_iqama_name(text: str) -> str:
         "اسم صاحب الاقامة",
         "مكان",
     )
-    for line in (item.strip() for item in text.splitlines()):
+    for line in lines:
         if not line or any(token in line.lower() for token in ignored):
             continue
         if any(token in line for token in stop_labels) or re.search(r"\d{2,}", line):
@@ -272,7 +311,8 @@ def parse_iqama(text: str, language: str = "ar") -> Dict[str, str]:
     if not id_match:
         id_match = re.search(r"[0-9٠-٩]{10}", text)
     normalized_id = normalize_digits(id_match.group(0)) if id_match else ""
-    nationality = _extract_labeled_value(text, ["الجنسية", "Nationality"])
+    nationality = _extract_iqama_nationality(text) or _extract_labeled_value(text, ["الجنسية", "Nationality"])
+    nationality = re.split(r"\s+(?:المهنة|Occupation|الديانة|Religion)\s*[:：-]?", nationality, maxsplit=1, flags=re.IGNORECASE)[0].strip()
     date_of_birth = _extract_labeled_date(text, ["تاريخ الميلاد", "Date of Birth", "DOB"])
     expiry_date = _extract_labeled_date(
         text,
@@ -281,7 +321,8 @@ def parse_iqama(text: str, language: str = "ar") -> Dict[str, str]:
     english_name = ""
     for line in text.splitlines():
         candidate = re.sub(r"[^A-Za-z ]", "", line).strip()
-        if len(re.findall(r"[A-Za-z]+", candidate)) >= 3:
+        words = re.findall(r"[A-Za-z]+", candidate)
+        if len(words) >= 3 and candidate == candidate.upper():
             english_name = re.sub(r"\s+", " ", candidate)
             break
 
