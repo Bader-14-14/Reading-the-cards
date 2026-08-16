@@ -5,6 +5,7 @@ import uuid
 from .ocr_providers import parse_document, parse_document_saudi_id
 from .logging_service import save_log, list_logs, read_log
 from .exporter import create_word, create_excel
+from .unified_processor import MAX_BATCH_FILES, MAX_FILE_BYTES, process_card
 
 app = FastAPI(title="قراءة البطاقات - API")
 
@@ -51,6 +52,45 @@ async def extract_saudi_id(file: UploadFile = File(...), language: str = Query('
         raise HTTPException(status_code=500, detail=str(e))
     
     return {"filename": file.filename, "language": language, "data": parsed}
+
+
+@app.post("/extract-cards")
+async def extract_cards(
+    files: list[UploadFile] = File(...),
+    provider: str = 'azure',
+    language: str = 'ar',
+):
+    """Process one or multiple cards through the same content-based path."""
+    if not files or len(files) > MAX_BATCH_FILES:
+        raise HTTPException(status_code=400, detail=f"Upload between 1 and {MAX_BATCH_FILES} files.")
+
+    results = []
+    for file in files:
+        image_bytes = await file.read(MAX_FILE_BYTES + 1)
+        if len(image_bytes) > MAX_FILE_BYTES:
+            results.append({
+                "filename": file.filename,
+                "card_type": "unknown",
+                "language": language,
+                "data": None,
+                "missing_fields": [],
+                "error": "File exceeds the 10 MB limit.",
+            })
+            continue
+        try:
+            result = process_card(image_bytes, provider=provider, language=language)
+            result.update({"filename": file.filename, "error": None})
+        except Exception:
+            result = {
+                "filename": file.filename,
+                "card_type": "unknown",
+                "language": language,
+                "data": None,
+                "missing_fields": [],
+                "error": "Card processing failed.",
+            }
+        results.append(result)
+    return {"results": results}
 
 
 @app.get('/logs')
