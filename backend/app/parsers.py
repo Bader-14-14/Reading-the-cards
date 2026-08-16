@@ -35,6 +35,42 @@ def _extract_labeled_date(text: str, labels: list[str]) -> str:
     return normalize_digits(match.group(0)) if match else ""
 
 
+def _extract_iqama_name(text: str) -> str:
+    """Prefer the resident name printed above the Iqama fields."""
+    labeled_name = _extract_labeled_value(
+        text,
+        [
+            "اسم صاحب الإقامة",
+            "اسم صاحب الاقامة",
+            "Resident Name",
+            "Name of Resident",
+        ],
+    )
+    if labeled_name:
+        return labeled_name
+
+    ignored = ("هوية مقيم", "رقم النسخة", "الاسم", "name", "full name")
+    stop_labels = (
+        "رقم",
+        "تاريخ",
+        "الجنسية",
+        "المهنة",
+        "اسم صاحب العمل",
+        "اسم صاحب الإقامة",
+        "اسم صاحب الاقامة",
+        "مكان",
+    )
+    for line in (item.strip() for item in text.splitlines()):
+        if not line or any(token in line.lower() for token in ignored):
+            continue
+        if any(token in line for token in stop_labels) or re.search(r"\d{2,}", line):
+            break
+        arabic_words = re.findall(r"[\u0600-\u06ff]+", line)
+        if len(arabic_words) >= 3:
+            return " ".join(arabic_words)
+    return ""
+
+
 def find_first_digits(text: str, length: int = 10):
     patterns = [
         rf"(?<!\d)\d{{{length}}}(?!\d)",
@@ -186,7 +222,18 @@ def parse_residency(text: str) -> Dict[str, str]:
 
 
 def parse_iqama(text: str) -> Dict[str, str]:
-    name = _extract_labeled_value(text, ["الاسم", "Name", "Full Name"])
+    name = _extract_iqama_name(text) or _extract_labeled_value(
+        text,
+        [
+            "الاسم",
+            "اسم صاحب الإقامة",
+            "اسم صاحب الاقامة",
+            "Name",
+            "Full Name",
+            "Resident Name",
+            "Name of Resident",
+        ],
+    )
     id_number = _extract_labeled_value(
         text,
         ["رقم الهوية", "رقم الإقامة", "Iqama Number", "ID Number"],

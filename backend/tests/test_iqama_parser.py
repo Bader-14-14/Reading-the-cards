@@ -28,3 +28,52 @@ def test_residency_alias_keeps_iqama_fields_available():
 
     assert parsed["iqama_number"] == "2572312086"
     assert parsed["nationality"] == "الهند"
+
+
+def test_resident_name_label_maps_to_unified_name_field():
+    parsed = parse_iqama(
+        "اسم صاحب الإقامة: محمد سليم محمد نسيم\n"
+        "رقم الهوية : ٢٥٧٢٣١٢٠٨٦"
+    )
+
+    assert parsed["name"] == "محمد سليم محمد نسيم"
+
+
+def test_resident_name_value_can_follow_label_on_next_line():
+    parsed = parse_iqama(
+        "اسم صاحب الاقامة\n"
+        "محمد سليم محمد نسيم\n"
+        "رقم الهوية\n"
+        "٢٥٧٢٣١٢٠٨٦"
+    )
+
+    assert parsed["name"] == "محمد سليم محمد نسيم"
+    assert parsed["id_number"] == "2572312086"
+
+
+def test_iqama_name_prefers_top_resident_name_over_employer_name():
+    text = """هوية مقيم
+محمد سليم محمد نسيم
+MOHAMMAD SALEEM MOHAMMAD NASEEM
+رقم الهوية: ٢٥٧٢٣١٢٠٨٦
+اسم صاحب العمل: مؤسسة وليد علي عمر باشميل للمقاولات
+"""
+
+    assert parse_iqama(text)["name"] == "محمد سليم محمد نسيم"
+
+
+def test_iqama_fields_can_be_on_the_next_line():
+    text = """هوية مقيم
+الاسم:
+محمد سليم محمد نسيم
+رقم الهوية:
+٢٥٧٢٣١٢٠٨٦
+الجنسية:
+الهند
+"""
+
+    parsed = parse_iqama(text)
+
+    assert parsed["name"] == "محمد سليم محمد نسيم"
+    assert parsed["id_number"] == "2572312086"
+    assert parsed["nationality"] == "الهند"
