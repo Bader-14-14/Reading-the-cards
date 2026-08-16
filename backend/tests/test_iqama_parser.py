@@ -17,6 +17,7 @@ def test_parse_iqama_extracts_arabic_labeled_fields():
     assert parsed["id_number"] == "2572312086"
     assert parsed["iqama_number"] == "2572312086"
     assert parsed["nationality"] == "الهند"
+    assert parsed["nationality_ar"] == "الهند"
     assert parsed["dob"] == "1988/08/08"
     assert parsed["doe"] == "2026/10/06"
 
@@ -91,4 +92,12 @@ def test_iqama_supports_rtl_label_order_and_english_name():
     assert parsed["name"] == "MOHAMMAD SALEEM MOHAMMAD NASEEM"
     assert parsed["name_ar"] == "محمد سليم محمد نسيم"
     assert parsed["name_en"] == "MOHAMMAD SALEEM MOHAMMAD NASEEM"
-    assert parsed["nationality"] == "الهند"
+    assert parsed["nationality"] == "India"
+    assert parsed["nationality_ar"] == "الهند"
+
+
+def test_iqama_translates_common_nationality_for_english_output():
+    parsed = parse_iqama("الهند الجنسية:\nMOHAMMAD SALEEM MOHAMMAD NASEEM", language="en")
+
+    assert parsed["nationality"] == "India"
+    assert parsed["nationality_ar"] == "الهند"

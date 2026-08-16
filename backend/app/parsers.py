@@ -3,6 +3,16 @@ from typing import Dict
 
 
 _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+_NATIONALITY_EN = {
+    "الهند": "India",
+    "باكستان": "Pakistan",
+    "بنغلاديش": "Bangladesh",
+    "الفلبين": "Philippines",
+    "مصر": "Egypt",
+    "السودان": "Sudan",
+    "اليمن": "Yemen",
+    "سوريا": "Syria",
+}
 
 
 def normalize_digits(value: str) -> str:
@@ -279,7 +289,10 @@ def parse_iqama(text: str, language: str = "ar") -> Dict[str, str]:
         'name_en': english_name,
         'id_number': normalized_id,
         'iqama_number': normalized_id,
-        'nationality': nationality,
+        'nationality': _NATIONALITY_EN.get(nationality, nationality)
+        if language.lower().startswith("en")
+        else nationality,
+        'nationality_ar': nationality,
         'dob': date_of_birth,
         'doe': expiry_date,
         'raw_text': text,
