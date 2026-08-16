@@ -15,6 +15,42 @@ def test_card_classification_uses_content_not_filename():
     assert classify_card_text("الهوية الوطنية National ID").card_type == "national_id"
 
 
+def test_license_parser_fields_are_independent_from_identity_tables():
+    from app.parsers import parse_license
+
+    parsed = parse_license(
+        "رخصة قيادة\n"
+        "MOHAMMAD SALEEM MOHAMMAD NASEEM\n"
+        "ID Number: 2572312086\n"
+        "License Type: Heavy Transport\n"
+        "Issue Date: 05/03/2011\n"
+        "Date of Birth: 08/08/1988\n"
+        "Nationality: India\n"
+        "Expiry Date: 31/07/2030\n"
+        "Blood Type: B+"
+    )
+
+    assert parsed["license_number"] == "2572312086"
+    assert parsed["license_type"] == "Heavy Transport"
+    assert parsed["issue_date"] == "05/03/2011"
+    assert parsed["blood_type"] == "B+"
+
+
+def test_license_parser_selects_arabic_values_when_requested():
+    from app.parsers import parse_license
+
+    parsed = parse_license(
+        "محمد سليم محمد نسيم MOHAMMAD SALEEM MOHAMMAD NASEEM\n"
+        "نوع الرخصة: نقل ثقيل\nLicense Type: Heavy Transport\n"
+        "الهند الجنسية\nNationality: India\nفصيلة الدم: +B",
+        language="ar",
+    )
+
+    assert parsed["name"] == "محمد سليم محمد نسيم"
+    assert parsed["license_type"] == "نقل ثقيل"
+    assert parsed["nationality"] == "الهند"
+
+
 def test_unified_endpoint_accepts_one_or_many_and_keeps_errors_per_file(monkeypatch):
     calls = []
 

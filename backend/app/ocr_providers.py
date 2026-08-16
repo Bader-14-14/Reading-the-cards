@@ -121,7 +121,7 @@ def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azur
     if document_type == 'id':
         return parse_id(text)
     elif document_type == 'license':
-        return parse_license(text)
+        return parse_license(text, language=language)
     elif document_type == 'vehicle':
         return parse_vehicle(text)
     elif document_type in ('residency', 'iqama'):
