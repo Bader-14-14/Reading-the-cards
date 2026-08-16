@@ -18,6 +18,15 @@ pip install -r requirements.txt
 - `AZURE_OCR_ENDPOINT` — عنوان خدمة Computer Vision (مثال: https://<resource>.cognitiveservices.azure.com)
 - `AZURE_OCR_KEY` — مفتاح الاشتراك
 
+الترجمة التلقائية عند غياب الاسم باللغة المطلوبة:
+- `AZURE_TRANSLATOR_KEY` — مفتاح Azure Translator (اختياري)
+- `AZURE_TRANSLATOR_ENDPOINT` — عنوان Azure Translator (اختياري)
+- `AZURE_TRANSLATOR_REGION` — منطقة الخدمة (اختياري)
+
+يستخدم التطبيق الاسم المطبوع باللغة المطلوبة أولاً، ثم الاسم المطبوع باللغة
+الأخرى، ثم Azure Translator عند الحاجة. إذا لم تتوفر إعدادات الترجمة أو فشلت
+الخدمة، يحتفظ التطبيق بالقيمة المتاحة ولا يفقد البيانات.
+
 تشغيل الخادم المحلي:
 
 ```powershell

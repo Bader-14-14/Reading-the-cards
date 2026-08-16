@@ -101,3 +101,17 @@ def test_iqama_translates_common_nationality_for_english_output():
 
     assert parsed["nationality"] == "India"
     assert parsed["nationality_ar"] == "الهند"
+
+
+def test_iqama_translates_missing_requested_name_language(monkeypatch):
+    monkeypatch.setattr(
+        "app.translation.translate_text",
+        lambda value, source, target: "محمد سليم محمد نسيم",
+    )
+
+    parsed = parse_iqama(
+        "MOHAMMAD SALEEM MOHAMMAD NASEEM\nالهند الجنسية:",
+        language="ar",
+    )
+
+    assert parsed["name"] == "محمد سليم محمد نسيم"

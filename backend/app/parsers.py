@@ -1,6 +1,8 @@
 import re
 from typing import Dict
 
+from .translation import choose_name
+
 
 _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
 _NATIONALITY_EN = {
@@ -284,7 +286,7 @@ def parse_iqama(text: str, language: str = "ar") -> Dict[str, str]:
             break
 
     return {
-        'name': (english_name if language.lower().startswith("en") and english_name else name) or extract_name(text),
+        'name': choose_name(name, english_name, language) or extract_name(text),
         'name_ar': name,
         'name_en': english_name,
         'id_number': normalized_id,

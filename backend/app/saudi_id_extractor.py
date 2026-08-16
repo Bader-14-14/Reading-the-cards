@@ -4,6 +4,7 @@ Integrates Tesseract with preprocessing and intelligent field extraction.
 """
 
 import re
+from .translation import choose_name
 import os
 from pathlib import Path
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
@@ -374,7 +375,9 @@ def extract_saudi_id(image_bytes: bytes, language: str = 'ar') -> dict:
     
     # Return based on requested language
     result = {
-        'name': name_ar if language == 'ar' else name_en,
+        'name': choose_name(name_ar, name_en, language),
+        'name_ar': name_ar,
+        'name_en': name_en,
         'id_number': id_number,
         'dob': dob,
         'doe': doe,
