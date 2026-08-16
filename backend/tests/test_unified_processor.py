@@ -51,6 +51,42 @@ def test_license_parser_selects_arabic_values_when_requested():
     assert parsed["nationality"] == "الهند"
 
 
+def test_license_export_order_matches_card_order(tmp_path):
+    from openpyxl import load_workbook
+    from app.exporter import create_excel
+
+    output = tmp_path / "license.xlsx"
+    create_excel(
+        {
+            "name": "محمد سليم محمد نسيم",
+            "id_number": "2572312086",
+            "license_number": "2572312086",
+            "license_type": "نقل ثقيل",
+            "issue_date": "2011/03/05",
+            "dob": "1988/08/08",
+            "nationality": "الهند",
+            "expiry": "2030/07/31",
+            "blood_type": "+B",
+        },
+        str(output),
+        language="ar",
+    )
+
+    rows = list(load_workbook(output).active.iter_rows(values_only=True))
+    assert [row[0] for row in rows] == [
+        "الحقل",
+        "الاسم",
+        "رقم الهوية",
+        "رقم الرخصة",
+        "نوع الرخصة",
+        "تاريخ الإصدار",
+        "تاريخ الميلاد",
+        "الجنسية",
+        "تاريخ الانتهاء",
+        "فصيلة الدم",
+    ]
+
+
 def test_unified_endpoint_accepts_one_or_many_and_keeps_errors_per_file(monkeypatch):
     calls = []
 

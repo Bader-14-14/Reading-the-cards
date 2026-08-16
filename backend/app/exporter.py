@@ -8,6 +8,24 @@ import os
 
 def _display_fields(data: dict, language: str = 'ar') -> list[tuple[str, str]]:
     english = language.lower().startswith('en')
+    if data.get('license_number') or data.get('license_type'):
+        fields = [
+            ('name', 'Name' if english else 'الاسم'),
+            ('id_number', 'ID Number' if english else 'رقم الهوية'),
+            ('license_number', 'License Number' if english else 'رقم الرخصة'),
+            ('license_type', 'License Type' if english else 'نوع الرخصة'),
+            ('issue_date', 'Issue Date' if english else 'تاريخ الإصدار'),
+            ('dob', 'Date of Birth' if english else 'تاريخ الميلاد'),
+            ('nationality', 'Nationality' if english else 'الجنسية'),
+            ('expiry', 'Date of Expiry' if english else 'تاريخ الانتهاء'),
+            ('blood_type', 'Blood Type' if english else 'فصيلة الدم'),
+        ]
+        return [
+            (label, str(data[key]))
+            for key, label in fields
+            if data.get(key, '') not in ('', None)
+        ]
+
     number_key = 'iqama_number' if data.get('iqama_number') else 'id_number'
     labels = {
         'name': 'Name' if english else 'الاسم',
