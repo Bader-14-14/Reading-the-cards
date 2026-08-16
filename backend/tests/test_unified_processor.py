@@ -9,6 +9,7 @@ CLIENT = TestClient(app)
 
 def test_card_classification_uses_content_not_filename():
     assert classify_card_text("هوية مقيم رقم الهوية").card_type == "iqama"
+    assert classify_card_text("مقيم هوية رقم الهوية الجنسية").card_type == "iqama"
     assert classify_card_text("رخصة قيادة License").card_type == "driving_license"
     assert classify_card_text("استمارة رخصة سير").card_type == "vehicle_registration"
     assert classify_card_text("الهوية الوطنية National ID").card_type == "national_id"
