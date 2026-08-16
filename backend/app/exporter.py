@@ -10,6 +10,7 @@ def _display_fields(data: dict, language: str = 'ar') -> list[tuple[str, str]]:
     english = language.lower().startswith('en')
     if data.get('license_number') or data.get('license_type'):
         fields = [
+            ('card_type', 'Card Type' if english else 'نوع البطاقة'),
             ('name', 'Name' if english else 'الاسم'),
             ('id_number', 'ID Number' if english else 'رقم الهوية'),
             ('license_number', 'License Number' if english else 'رقم الرخصة'),
@@ -20,21 +21,28 @@ def _display_fields(data: dict, language: str = 'ar') -> list[tuple[str, str]]:
             ('expiry', 'Date of Expiry' if english else 'تاريخ الانتهاء'),
             ('blood_type', 'Blood Type' if english else 'فصيلة الدم'),
         ]
+        values = dict(data)
+        values.setdefault('card_type', 'Driving License' if english else 'رخصة سياقة')
         return [
-            (label, str(data[key]))
+            (label, str(values[key]))
             for key, label in fields
-            if data.get(key, '') not in ('', None)
+            if values.get(key, '') not in ('', None)
         ]
 
     number_key = 'iqama_number' if data.get('iqama_number') else 'id_number'
+    card_type = 'Iqama' if data.get('iqama_number') else 'National ID'
+    card_type_ar = 'هوية مقيم' if data.get('iqama_number') else 'هوية وطنية'
     labels = {
+        'card_type': 'Card Type' if english else 'نوع البطاقة',
         'name': 'Name' if english else 'الاسم',
         number_key: 'Iqama Number' if english and number_key == 'iqama_number' else ('ID Number' if english else ('رقم الإقامة' if number_key == 'iqama_number' else 'رقم الهوية')),
         'nationality': 'Nationality' if english else 'الجنسية',
         'dob': 'Date of Birth' if english else 'تاريخ الميلاد',
         'doe': 'Date of Expiry' if english else 'تاريخ الانتهاء',
     }
-    return [(labels[key], str(data[key])) for key in labels if data.get(key, '') not in ('', None)]
+    values = dict(data)
+    values.setdefault('card_type', card_type if english else card_type_ar)
+    return [(labels[key], str(values[key])) for key in labels if values.get(key, '') not in ('', None)]
 
 
 def create_word(data: dict, out_path: str, language: str = 'ar') -> str:
