@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 
-from .ocr_providers import detect_text_azure, detect_text_tesseract, parse_document, parse_document_saudi_id
+from .ocr_providers import detect_text_azure, detect_text_tesseract, parse_document_saudi_id
+from .parsers import parse_iqama
 
 MAX_BATCH_FILES = 20
 MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -16,10 +17,22 @@ class CardClassification:
 
 def classify_card_text(text: str) -> CardClassification:
     """Classify a card from OCR content, never from its filename."""
-    normalized = (text or "").lower()
-    if "الهوية الوطنية" in normalized or "national id" in normalized:
+    normalized = " ".join((text or "").lower().split())
+    national_markers = (
+        "الهوية الوطنية",
+        "الهوية الوطنيه",
+        "national id",
+        "national identity",
+    )
+    iqama_markers = (
+        "هوية مقيم",
+        "مقيم هوية",
+        "هوية مقيمٍ",
+        "iqama",
+    )
+    if any(marker in normalized for marker in national_markers):
         return CardClassification("national_id", "high")
-    if "هوية مقيم" in normalized or "iqama" in normalized or "رقم الإقامة" in normalized:
+    if any(marker in normalized for marker in iqama_markers):
         return CardClassification("iqama", "high")
     if "رخصة قيادة" in normalized or "driving license" in normalized:
         return CardClassification("driving_license", "high")
@@ -46,11 +59,9 @@ def process_card(image_bytes: bytes, *, provider: str = "azure", language: str =
     if classification.card_type == "national_id":
         data = parse_document_saudi_id(image_bytes, language=language)
     elif classification.card_type == "iqama":
-        data = parse_document("iqama", image_bytes, provider=provider, language=language)
-    elif classification.card_type == "driving_license":
-        data = parse_document("license", image_bytes, provider=provider, language=language)
-    elif classification.card_type == "vehicle_registration":
-        data = parse_document("vehicle", image_bytes, provider=provider, language=language)
+        data = parse_iqama(text, language=language)
+    elif classification.card_type in {"driving_license", "vehicle_registration"}:
+        data = {"raw_text": text}
     else:
         data = {"raw_text": text}
 

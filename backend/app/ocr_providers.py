@@ -67,18 +67,27 @@ def detect_text_azure(image_bytes: bytes) -> str:
         raise RuntimeError('Azure OCR not configured (set AZURE_OCR_ENDPOINT and AZURE_OCR_KEY)')
     headers = {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/octet-stream'}
     analyze_url = endpoint.rstrip('/') + '/documentintelligence/documentModels/prebuilt-read:analyze?api-version=2024-11-30'
-    response = requests.post(analyze_url, headers=headers, data=image_bytes, timeout=30)
+    response = None
+    for attempt in range(3):
+        response = requests.post(analyze_url, headers=headers, data=image_bytes, timeout=30)
+        if response.status_code not in {429, 500, 502, 503, 504} or attempt == 2:
+            break
+        retry_after = response.headers.get('Retry-After')
+        try:
+            delay = min(float(retry_after), 10.0) if retry_after else 2.0 ** attempt
+        except ValueError:
+            delay = 2.0 ** attempt
+        time.sleep(delay)
     if response.status_code == 202:
         operation_url = response.headers.get('Operation-Location')
         if not operation_url:
             raise RuntimeError('Azure OCR did not return an operation location')
         result = None
         for _ in range(20):
-            poll = requests.get(
-                operation_url,
-                headers={'Ocp-Apim-Subscription-Key': key},
-                timeout=30,
-            )
+            poll = requests.get(operation_url, headers={'Ocp-Apim-Subscription-Key': key}, timeout=30)
+            if poll.status_code in {429, 500, 502, 503, 504}:
+                time.sleep(2.0 ** min(attempt, 3))
+                continue
             poll.raise_for_status()
             result = poll.json()
             if result.get('status') in ('succeeded', 'failed'):
