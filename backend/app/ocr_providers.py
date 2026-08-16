@@ -77,7 +77,7 @@ def detect_text_azure(image_bytes: bytes) -> str:
     return '\n'.join(lines)
 
 
-from .parsers import parse_id, parse_license, parse_vehicle, parse_residency
+from .parsers import parse_id, parse_license, parse_vehicle, parse_iqama
 from .saudi_id_extractor import extract_saudi_id
 
 
@@ -101,8 +101,8 @@ def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azur
         return parse_license(text)
     elif document_type == 'vehicle':
         return parse_vehicle(text)
-    elif document_type == 'residency':
-        return parse_residency(text)
+    elif document_type in ('residency', 'iqama'):
+        return parse_iqama(text)
     else:
         return {'raw_text': text}
 

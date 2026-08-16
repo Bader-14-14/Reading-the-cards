@@ -2,6 +2,39 @@ import re
 from typing import Dict
 
 
+_ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
+
+def normalize_digits(value: str) -> str:
+    return (value or "").translate(_ARABIC_DIGITS)
+
+
+def _extract_labeled_value(text: str, labels: list[str]) -> str:
+    """Extract a value on the same line as a label or on the next line."""
+    lines = [line.strip() for line in text.splitlines()]
+    for index, line in enumerate(lines):
+        for label in labels:
+            match = re.search(
+                rf"{re.escape(label)}\s*(?:[:：-]\s*)?(.*)$", line,
+                re.IGNORECASE,
+            )
+            if not match:
+                continue
+            value = match.group(1).strip(" :-：")
+            if value:
+                return value
+            for next_line in lines[index + 1:]:
+                if next_line:
+                    return next_line.strip(" :-：")
+    return ""
+
+
+def _extract_labeled_date(text: str, labels: list[str]) -> str:
+    value = _extract_labeled_value(text, labels)
+    match = re.search(r"[0-9٠-٩]{1,4}[/-][0-9٠-٩]{1,2}[/-][0-9٠-٩]{1,4}", value)
+    return normalize_digits(match.group(0)) if match else ""
+
+
 def find_first_digits(text: str, length: int = 10):
     patterns = [
         rf"(?<!\d)\d{{{length}}}(?!\d)",
@@ -149,9 +182,32 @@ def parse_vehicle(text: str) -> Dict[str, str]:
 
 
 def parse_residency(text: str) -> Dict[str, str]:
+    return parse_iqama(text)
+
+
+def parse_iqama(text: str) -> Dict[str, str]:
+    name = _extract_labeled_value(text, ["الاسم", "Name", "Full Name"])
+    id_number = _extract_labeled_value(
+        text,
+        ["رقم الهوية", "رقم الإقامة", "Iqama Number", "ID Number"],
+    )
+    id_match = re.search(r"[0-9٠-٩]{10}", id_number)
+    if not id_match:
+        id_match = re.search(r"[0-9٠-٩]{10}", text)
+    normalized_id = normalize_digits(id_match.group(0)) if id_match else ""
+    nationality = _extract_labeled_value(text, ["الجنسية", "Nationality"])
+    date_of_birth = _extract_labeled_date(text, ["تاريخ الميلاد", "Date of Birth", "DOB"])
+    expiry_date = _extract_labeled_date(
+        text,
+        ["تاريخ الانتهاء", "تاريخ انتهاء", "Expiry Date", "Date of Expiry", "DOE"],
+    )
+
     return {
-        'name': extract_name(text),
-        'iqama_number': find_first_digits(text, 10),
-        'nationality': '',
+        'name': name or extract_name(text),
+        'id_number': normalized_id,
+        'iqama_number': normalized_id,
+        'nationality': nationality,
+        'dob': date_of_birth,
+        'doe': expiry_date,
         'raw_text': text,
     }
