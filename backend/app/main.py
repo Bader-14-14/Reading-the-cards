@@ -18,10 +18,10 @@ async def root():
 
 
 @app.post("/parse")
-async def parse(file: UploadFile = File(...), document_type: str = 'id', provider: str = 'azure', save_log: bool = False):
+async def parse(file: UploadFile = File(...), document_type: str = 'id', provider: str = 'azure', language: str = 'ar', save_log: bool = False):
     data = await file.read()
     try:
-        parsed = parse_document(document_type, data, provider=provider)
+        parsed = parse_document(document_type, data, provider=provider, language=language)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     if save_log:

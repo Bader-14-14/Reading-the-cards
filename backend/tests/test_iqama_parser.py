@@ -77,3 +77,18 @@ def test_iqama_fields_can_be_on_the_next_line():
     assert parsed["name"] == "محمد سليم محمد نسيم"
     assert parsed["id_number"] == "2572312086"
     assert parsed["nationality"] == "الهند"
+
+
+def test_iqama_supports_rtl_label_order_and_english_name():
+    parsed = parse_iqama(
+        "محمد سليم محمد نسيم\n"
+        "MOHAMMAD SALEEM MOHAMMAD NASEEM\n"
+        "الهند الجنسية:\n"
+        "رقم الهوية: ٢٥٧٢٣١٢٠٨٦",
+        language="en",
+    )
+
+    assert parsed["name"] == "MOHAMMAD SALEEM MOHAMMAD NASEEM"
+    assert parsed["name_ar"] == "محمد سليم محمد نسيم"
+    assert parsed["name_en"] == "MOHAMMAD SALEEM MOHAMMAD NASEEM"
+    assert parsed["nationality"] == "الهند"

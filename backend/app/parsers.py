@@ -19,10 +19,20 @@ def _extract_labeled_value(text: str, labels: list[str]) -> str:
                 re.IGNORECASE,
             )
             if not match:
+                label_match = re.search(re.escape(label), line, re.IGNORECASE)
+                if label_match:
+                    before_label = line[:label_match.start()].strip(" :-：")
+                    if before_label:
+                        return before_label
                 continue
             value = match.group(1).strip(" :-：")
             if value:
                 return value
+            label_match = re.search(re.escape(label), line, re.IGNORECASE)
+            if label_match:
+                before_label = line[:label_match.start()].strip(" :-：")
+                if before_label:
+                    return before_label
             for next_line in lines[index + 1:]:
                 if next_line:
                     return next_line.strip(" :-：")
@@ -49,7 +59,15 @@ def _extract_iqama_name(text: str) -> str:
     if labeled_name:
         return labeled_name
 
-    ignored = ("هوية مقيم", "رقم النسخة", "الاسم", "name", "full name")
+    ignored = (
+        "هوية مقيم",
+        "رقم النسخة",
+        "الاسم",
+        "name",
+        "full name",
+        "الملكة العربية السعودية",
+        "وزارة الداخلية",
+    )
     stop_labels = (
         "رقم",
         "تاريخ",
@@ -221,7 +239,7 @@ def parse_residency(text: str) -> Dict[str, str]:
     return parse_iqama(text)
 
 
-def parse_iqama(text: str) -> Dict[str, str]:
+def parse_iqama(text: str, language: str = "ar") -> Dict[str, str]:
     name = _extract_iqama_name(text) or _extract_labeled_value(
         text,
         [
@@ -248,9 +266,17 @@ def parse_iqama(text: str) -> Dict[str, str]:
         text,
         ["تاريخ الانتهاء", "تاريخ انتهاء", "Expiry Date", "Date of Expiry", "DOE"],
     )
+    english_name = ""
+    for line in text.splitlines():
+        candidate = re.sub(r"[^A-Za-z ]", "", line).strip()
+        if len(re.findall(r"[A-Za-z]+", candidate)) >= 3:
+            english_name = re.sub(r"\s+", " ", candidate)
+            break
 
     return {
-        'name': name or extract_name(text),
+        'name': (english_name if language.lower().startswith("en") and english_name else name) or extract_name(text),
+        'name_ar': name,
+        'name_en': english_name,
         'id_number': normalized_id,
         'iqama_number': normalized_id,
         'nationality': nationality,

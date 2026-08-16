@@ -26,12 +26,15 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 نقاط النهاية الأساسية:
 - `GET /` — حالة الخدمة
-- `POST /parse` — رفع صورة ومعالجتها: باراميتر `document_type` (id/iqama/license/vehicle/residency) و`provider` (azure/local)
+- `POST /parse` — رفع صورة ومعالجتها: باراميتر `document_type` (id/iqama/license/vehicle/residency)، و`provider` (azure/local)، و`language` (ar/en)
 - `POST /export` — تصدير بيانات JSON إلى Word أو Excel. يعيد ملف للتحميل.
 
 عند استخدام `document_type=iqama` أو `document_type=residency`، يعيد الخادم
 الاسم ورقم الهوية/الإقامة والجنسية وتاريخ الميلاد وتاريخ الانتهاء، مع إبقاء
 `iqama_number` للتوافق مع الاستجابات السابقة.
+
+عند استخدام `provider=azure`، يستخدم الخادم Azure Document Intelligence
+`prebuilt-read` لاستخراج النص العربي والإنجليزي من البطاقة.
 
 ملاحظات:
 - إذا أردت دعم لغات أفضل في Tesseract، ثبت حزم اللغة المناسبة (Arabic) وأضف `ara` إلى معامل `lang` في `ocr_providers.py`.

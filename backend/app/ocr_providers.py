@@ -1,5 +1,6 @@
 import os
 import io
+import time
 import requests
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 
@@ -64,24 +65,37 @@ def detect_text_azure(image_bytes: bytes) -> str:
     key = os.environ.get('AZURE_OCR_KEY')
     if not endpoint or not key:
         raise RuntimeError('Azure OCR not configured (set AZURE_OCR_ENDPOINT and AZURE_OCR_KEY)')
-    ocr_url = endpoint.rstrip('/') + '/vision/v3.2/ocr?language=unk&detectOrientation=true'
     headers = {'Ocp-Apim-Subscription-Key': key, 'Content-Type': 'application/octet-stream'}
-    resp = requests.post(ocr_url, headers=headers, data=image_bytes)
-    resp.raise_for_status()
-    data = resp.json()
-    lines = []
-    for region in data.get('regions', []):
-        for line in region.get('lines', []):
-            words = [w.get('text', '') for w in line.get('words', [])]
-            lines.append(' '.join(words))
-    return '\n'.join(lines)
+    analyze_url = endpoint.rstrip('/') + '/documentintelligence/documentModels/prebuilt-read:analyze?api-version=2024-11-30'
+    response = requests.post(analyze_url, headers=headers, data=image_bytes, timeout=30)
+    if response.status_code == 202:
+        operation_url = response.headers.get('Operation-Location')
+        if not operation_url:
+            raise RuntimeError('Azure OCR did not return an operation location')
+        result = None
+        for _ in range(20):
+            poll = requests.get(
+                operation_url,
+                headers={'Ocp-Apim-Subscription-Key': key},
+                timeout=30,
+            )
+            poll.raise_for_status()
+            result = poll.json()
+            if result.get('status') in ('succeeded', 'failed'):
+                break
+            time.sleep(0.5)
+        if not result or result.get('status') != 'succeeded':
+            raise RuntimeError('Azure OCR analysis did not succeed')
+        return result.get('analyzeResult', {}).get('content', '')
+    response.raise_for_status()
+    return response.json().get('analyzeResult', {}).get('content', '')
 
 
 from .parsers import parse_id, parse_license, parse_vehicle, parse_iqama
 from .saudi_id_extractor import extract_saudi_id
 
 
-def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azure') -> dict:
+def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azure', language: str = 'ar') -> dict:
     """Return parsed fields for the given document type using OCR then heuristics.
     provider: 'azure' | 'local'
     """
@@ -102,7 +116,7 @@ def parse_document(document_type: str, image_bytes: bytes, provider: str = 'azur
     elif document_type == 'vehicle':
         return parse_vehicle(text)
     elif document_type in ('residency', 'iqama'):
-        return parse_iqama(text)
+        return parse_iqama(text, language=language)
     else:
         return {'raw_text': text}
 
