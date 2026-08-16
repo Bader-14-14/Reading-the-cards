@@ -10,6 +10,7 @@ class ParseResult(BaseModel):
 class ExportRequest(BaseModel):
     data: Dict[str, str]
     format: str  # 'word' or 'excel'
+    language: str = 'ar'
 
 
 from typing import List

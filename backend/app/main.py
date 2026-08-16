@@ -81,10 +81,10 @@ async def export(req: ExportRequest):
     fname = f"export_{uuid.uuid4().hex}"
     if fmt == 'word':
         out_path = os.path.join(TMP_DIR, fname + '.docx')
-        create_word(data, out_path)
+        create_word(data, out_path, language=req.language)
     elif fmt == 'excel':
         out_path = os.path.join(TMP_DIR, fname + '.xlsx')
-        create_excel(data, out_path)
+        create_excel(data, out_path, language=req.language)
     else:
         raise HTTPException(status_code=400, detail='unsupported format')
     return FileResponse(out_path, filename=os.path.basename(out_path))
