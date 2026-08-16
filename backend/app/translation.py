@@ -36,3 +36,10 @@ def choose_name(name_ar: str, name_en: str, language: str) -> str:
     if language.lower().startswith('en'):
         return name_en or translate_text(name_ar, 'ar', 'en') or name_ar
     return name_ar or translate_text(name_en, 'en', 'ar') or name_en
+
+
+def choose_value(value_ar: str, value_en: str, language: str) -> str:
+    """Select or translate any bilingual textual field."""
+    if language.lower().startswith('en'):
+        return value_en or translate_text(value_ar, 'ar', 'en') or value_ar
+    return value_ar or translate_text(value_en, 'en', 'ar') or value_en

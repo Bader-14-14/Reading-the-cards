@@ -1,7 +1,7 @@
 import re
 from typing import Dict
 
-from .translation import choose_name
+from .translation import choose_name, choose_value
 
 
 _ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
@@ -263,14 +263,58 @@ def parse_id(text: str) -> Dict[str, str]:
     }
 
 
-def parse_license(text: str) -> Dict[str, str]:
-    # license numbers often 7-9 digits; use first 7+ digit seq
-    m = re.search(r"\d{6,10}", text)
-    license_no = m.group(0) if m else ''
+def parse_license(text: str, language: str = "ar") -> Dict[str, str]:
+    def labeled(labels: list[str]) -> str:
+        return _extract_labeled_value(text, labels)
+
+    def number(labels: list[str]) -> str:
+        value = labeled(labels)
+        match = re.search(r"[0-9٠-٩]{6,10}", value)
+        if not match:
+            match = re.search(r"[0-9٠-٩]{6,10}", text)
+        return normalize_digits(match.group(0)) if match else ""
+
+    def date(labels: list[str]) -> str:
+        return _extract_labeled_date(text, labels)
+
+    arabic_name = labeled(["الاسم", "اسم حامل الرخصة"])
+    for line in text.splitlines():
+        arabic_prefix = re.match(r"^([ء-ي\s]+)\s+[A-Za-z]+", line.strip())
+        if arabic_prefix and len(arabic_prefix.group(1).split()) >= 3:
+            arabic_name = re.sub(r"\s+", " ", arabic_prefix.group(1)).strip()
+            break
+    english_name = ""
+    for line in text.splitlines():
+        candidate = re.sub(r"[^A-Za-z ]", "", line).strip()
+        if len(re.findall(r"[A-Za-z]+", candidate)) >= 3 and candidate == candidate.upper():
+            english_name = re.sub(r"\s+", " ", candidate)
+            break
+
+    name = choose_name(arabic_name, english_name, language) or extract_name(text)
+    license_type_ar = labeled(["نوع الرخصة"])
+    license_type_en = labeled(["License Type"])
+    nationality_ar = _extract_iqama_nationality(text)
+    nationality_en = labeled(["Nationality"])
+    blood_type_ar = labeled(["فصيلة الدم"])
+    blood_type_en = labeled(["Blood Type"])
     return {
-        'name': extract_name(text),
-        'license_number': license_no,
-        'expiry': find_date(text),
+        'name': name,
+        'name_ar': arabic_name,
+        'name_en': english_name,
+        'id_number': number(["رقم الهوية", "ID Number"]),
+        'license_number': number(["رقم الرخصة", "License Number"]),
+        'license_type': choose_value(license_type_ar, license_type_en, language),
+        'license_type_ar': license_type_ar,
+        'license_type_en': license_type_en,
+        'issue_date': date(["تاريخ الإصدار", "تاريخ الاصدار", "Issue Date"]),
+        'dob': date(["تاريخ الميلاد", "Date of Birth", "DOB"]),
+        'nationality': choose_value(nationality_ar, nationality_en, language),
+        'nationality_ar': nationality_ar,
+        'nationality_en': nationality_en,
+        'expiry': date(["تاريخ الانتهاء", "تاريخ انتهاء", "Expiry Date", "Date of Expiry"]),
+        'blood_type': choose_value(blood_type_ar, blood_type_en, language),
+        'blood_type_ar': blood_type_ar,
+        'blood_type_en': blood_type_en,
         'raw_text': text,
     }
 
