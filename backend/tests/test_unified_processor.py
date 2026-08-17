@@ -27,7 +27,8 @@ def test_license_parser_fields_are_independent_from_identity_tables():
         "Date of Birth: 08/08/1988\n"
         "Nationality: India\n"
         "Expiry Date: 31/07/2030\n"
-        "Blood Type: B+"
+        "Blood Type: B+",
+        language="en",
     )
 
     assert parsed["license_number"] == "2572312086"
@@ -75,6 +76,7 @@ def test_license_export_order_matches_card_order(tmp_path):
     rows = list(load_workbook(output).active.iter_rows(values_only=True))
     assert [row[0] for row in rows] == [
         "الحقل",
+        "نوع البطاقة",
         "الاسم",
         "رقم الهوية",
         "رقم الرخصة",
@@ -85,6 +87,21 @@ def test_license_export_order_matches_card_order(tmp_path):
         "تاريخ الانتهاء",
         "فصيلة الدم",
     ]
+
+
+def test_license_fields_stop_at_adjacent_labels_and_spaces():
+    from app.parsers import parse_license
+
+    parsed = parse_license(
+        "نوع الرخصة: خصوصي تاريخ الإصدار: ٢٠٢٣/١٠/٢٤ "
+        "تاريخ الميلاد: ١٩٩٣/٠١/٠٣ باكستان الجنسية: "
+        "تاريخ الانتهاء: ٢٠٢٨/٠٨/٣٠ فصيلة الدم: +B",
+        language="ar",
+    )
+
+    assert parsed["license_type"] == "خصوصي"
+    assert parsed["nationality"] == "باكستان"
+    assert parsed["blood_type"] == "+B"
 
 
 def test_unified_endpoint_accepts_one_or_many_and_keeps_errors_per_file(monkeypatch):
