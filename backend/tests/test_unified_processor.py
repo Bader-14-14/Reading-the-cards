@@ -31,7 +31,7 @@ def test_license_parser_fields_are_independent_from_identity_tables():
         language="en",
     )
 
-    assert parsed["license_number"] == "2572312086"
+    assert parsed["id_number"] == "2572312086"
     assert parsed["license_type"] == "Heavy Transport"
     assert parsed["issue_date"] == "05/03/2011"
     assert parsed["blood_type"] == "B+"
@@ -79,7 +79,6 @@ def test_license_export_order_matches_card_order(tmp_path):
         "رخصة سياقة",
         "محمد سليم محمد نسيم",
         "2572312086",
-        "2572312086",
         "نقل ثقيل",
         "2011/03/05",
         "1988/08/08",
@@ -92,7 +91,6 @@ def test_license_export_order_matches_card_order(tmp_path):
         "نوع البطاقة",
         "الاسم",
         "رقم الهوية",
-        "رقم الرخصة",
         "نوع الرخصة",
         "تاريخ الإصدار",
         "تاريخ الميلاد",

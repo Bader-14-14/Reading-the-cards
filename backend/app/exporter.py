@@ -8,12 +8,11 @@ import os
 
 def _display_fields(data: dict, language: str = 'ar') -> list[tuple[str, str]]:
     english = language.lower().startswith('en')
-    if data.get('license_number') or data.get('license_type'):
+    if data.get('license_type'):
         fields = [
             ('card_type', 'Card Type' if english else 'نوع البطاقة'),
             ('name', 'Name' if english else 'الاسم'),
             ('id_number', 'ID Number' if english else 'رقم الهوية'),
-            ('license_number', 'License Number' if english else 'رقم الرخصة'),
             ('license_type', 'License Type' if english else 'نوع الرخصة'),
             ('issue_date', 'Issue Date' if english else 'تاريخ الإصدار'),
             ('dob', 'Date of Birth' if english else 'تاريخ الميلاد'),

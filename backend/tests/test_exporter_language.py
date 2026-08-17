@@ -55,7 +55,6 @@ def test_license_export_starts_with_card_type_and_matches_card_order(tmp_path):
         ('Card Type', 'Driving License'),
         ('Name', 'MOHAMMAD SALEEM MOHAMMAD NASEEM'),
         ('ID Number', '2572312086'),
-        ('License Number', '2572312086'),
         ('License Type', 'Heavy Transport'),
         ('Issue Date', '2011/03/05'),
         ('Date of Birth', '1988/08/08'),

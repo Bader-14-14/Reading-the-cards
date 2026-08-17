@@ -45,7 +45,7 @@ def _missing_fields(card_type: str, data: dict) -> list[str]:
     required = {
         "national_id": ("name", "id_number", "dob", "doe"),
         "iqama": ("name", "id_number", "nationality", "dob", "doe"),
-        "driving_license": ("name", "license_number", "expiry"),
+        "driving_license": ("name", "id_number", "expiry"),
         "vehicle_registration": ("owner", "plate"),
     }.get(card_type, ())
     return [field for field in required if not data.get(field)]

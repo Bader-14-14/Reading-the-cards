@@ -396,7 +396,6 @@ def parse_license(text: str, language: str = "ar") -> Dict[str, str]:
         'name_ar': arabic_name,
         'name_en': english_name,
         'id_number': number(["رقم الهوية", "ID Number"]),
-        'license_number': number(["رقم الرخصة", "License Number"]),
         'license_type': choose_value(license_type_ar, license_type_en, language),
         'license_type_ar': license_type_ar,
         'license_type_en': license_type_en,
