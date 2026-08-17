@@ -16,10 +16,21 @@ _NATIONALITY_EN = {
     "اليمن": "Yemen",
     "سوريا": "Syria",
 }
+_NATIONALITY_AR = {value: key for key, value in _NATIONALITY_EN.items()}
+_LICENSE_TYPE_AR = {
+    "Private": "خصوصي",
+    "Heavy Transport": "نقل ثقيل",
+    "Heavy transport": "نقل ثقيل",
+}
 
 
 def normalize_digits(value: str) -> str:
     return (value or "").translate(_ARABIC_DIGITS)
+
+
+def _normalize_ocr_line(value: str) -> str:
+    value = re.sub(r"[\u200b-\u200f\ufeff]", "", value or "")
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def _extract_labeled_value(text: str, labels: list[str]) -> str:
@@ -264,8 +275,62 @@ def parse_id(text: str) -> Dict[str, str]:
 
 
 def parse_license(text: str, language: str = "ar") -> Dict[str, str]:
+    field_labels = [
+        "الاسم", "اسم حامل الرخصة", "Name", "ID Number", "رقم الهوية",
+        "License Number", "رقم الرخصة", "License Type", "نوع الرخصة",
+        "Issue Date", "تاريخ الإصدار", "تاريخ الاصدار", "Date of Birth",
+        "تاريخ الميلاد", "DOB", "Nationality", "الجنسية", "Expiry Date",
+        "تاريخ الانتهاء", "Date of Expiry", "Blood Type", "فصيلة الدم",
+    ]
+
+    def bounded_value(labels: list[str]) -> str:
+        lines = [_normalize_ocr_line(line) for line in text.splitlines()]
+        all_labels = sorted(field_labels, key=len, reverse=True)
+        for index, line in enumerate(lines):
+            for label in labels:
+                match = re.search(re.escape(label), line, re.IGNORECASE)
+                if not match:
+                    continue
+                before = line[:match.start()].strip(" :-：")
+                after = line[match.end():].strip(" :-：")
+                next_positions = [
+                    candidate.start()
+                    for candidate_label in all_labels
+                    if candidate_label.lower() != label.lower()
+                    for candidate in [re.search(re.escape(candidate_label), after, re.IGNORECASE)]
+                    if candidate
+                ]
+                if next_positions:
+                    after = after[:min(next_positions)].strip(" :-：")
+                if after:
+                    return after
+                if before and not re.search(r"\d", before):
+                    words = re.findall(r"[ء-يA-Za-z]+", before)
+                    if words:
+                        return words[-1]
+                for next_line in lines[index + 1:]:
+                    if next_line:
+                        if any(re.search(re.escape(next_label), next_line, re.IGNORECASE) for next_label in all_labels):
+                            break
+                        return _normalize_ocr_line(next_line).strip(" :-：")
+        return ""
+
     def labeled(labels: list[str]) -> str:
-        return _extract_labeled_value(text, labels)
+        return bounded_value(labels)
+
+    def after_label(labels: list[str]) -> str:
+        patterns = [re.escape(label).replace(r"\ ", r"\s*") for label in labels]
+        label_pattern = "(?:" + "|".join(patterns) + ")"
+        next_patterns = [
+            re.escape(label).replace(r"\ ", r"\s*")
+            for label in field_labels
+            if label not in labels
+        ]
+        next_pattern = "(?:" + "|".join(next_patterns) + ")"
+        match = re.search(rf"{label_pattern}\s*[:：-]?\s*(.*?)(?=\s*{next_pattern}\s*[:：-]?|$)", text, re.IGNORECASE | re.DOTALL)
+        if not match:
+            return ""
+        return _normalize_ocr_line(match.group(1)).strip(" :-：")
 
     def number(labels: list[str]) -> str:
         value = labeled(labels)
@@ -278,25 +343,54 @@ def parse_license(text: str, language: str = "ar") -> Dict[str, str]:
         return _extract_labeled_date(text, labels)
 
     arabic_name = labeled(["الاسم", "اسم حامل الرخصة"])
-    for line in text.splitlines():
-        arabic_prefix = re.match(r"^([ء-ي\s]+)\s+[A-Za-z]+", line.strip())
-        if arabic_prefix and len(arabic_prefix.group(1).split()) >= 3:
-            arabic_name = re.sub(r"\s+", " ", arabic_prefix.group(1)).strip()
-            break
     english_name = ""
     for line in text.splitlines():
+        if re.search(r"رقم|تاريخ|الجنسية|فصيلة|نوع\s+الرخصة|وزارة|رخصة", line):
+            continue
+        latin_start = re.search(r"[A-Za-z]", line)
+        prefix = line[:latin_start.start()] if latin_start else ""
+        arabic_words = re.findall(r"[\u0600-\u06FF]+", prefix)
+        if len(arabic_words) >= 2 and len(re.findall(r"[A-Za-z]+", line)) >= 2:
+            arabic_name = " ".join(arabic_words)
+            english_words = re.findall(r"[A-Za-z]+", line[latin_start.start():])
+            if len(english_words) >= 2:
+                english_name = " ".join(english_words).upper()
+            break
+    for line in text.splitlines():
+        latin_start = re.search(r"[A-Za-z]", line)
+        if latin_start:
+            arabic_prefix = re.findall(r"[\u0600-\u06FF]+", line[:latin_start.start()])
+            english_words = re.findall(r"[A-Za-z]+", line[latin_start.start():])
+            if len(arabic_prefix) >= 2 and len(english_words) >= 2:
+                english_name = " ".join(english_words).upper()
+                break
         candidate = re.sub(r"[^A-Za-z ]", "", line).strip()
-        if len(re.findall(r"[A-Za-z]+", candidate)) >= 3 and candidate == candidate.upper():
-            english_name = re.sub(r"\s+", " ", candidate)
+        words = re.findall(r"[A-Za-z]+", candidate)
+        if len(words) >= 2 and candidate == candidate.upper():
+            english_name = " ".join(words)
             break
 
     name = choose_name(arabic_name, english_name, language) or extract_name(text)
-    license_type_ar = labeled(["نوع الرخصة"])
-    license_type_en = labeled(["License Type"])
+    license_type_ar = after_label(["نوع الرخصة"]) or labeled(["نوع الرخصة"])
+    license_type_en = after_label(["License Type"]) or labeled(["License Type"])
     nationality_ar = _extract_iqama_nationality(text)
-    nationality_en = labeled(["Nationality"])
-    blood_type_ar = labeled(["فصيلة الدم"])
-    blood_type_en = labeled(["Blood Type"])
+    nationality_en = after_label(["Nationality"]) or labeled(["Nationality"])
+    if nationality_ar and not re.search(r"[\u0600-\u06FF]", nationality_ar):
+        nationality_en = nationality_ar
+        nationality_ar = ""
+    if not nationality_ar and nationality_en:
+        nationality_ar = _NATIONALITY_AR.get(nationality_en, "")
+    if not license_type_ar and license_type_en:
+        license_type_ar = _LICENSE_TYPE_AR.get(license_type_en, "")
+    blood_type_ar = ""
+    blood_type_en = ""
+    blood_pattern = r"([ABO][+-]|[+-][ABO])"
+    blood_match = re.search(rf"فصيلة\s*الدم\s*[:：-]?\s*{blood_pattern}", text, re.IGNORECASE)
+    if blood_match:
+        blood_type_ar = blood_match.group(1)
+    blood_match = re.search(rf"Blood\s*Type\s*[:：-]?\s*{blood_pattern}", text, re.IGNORECASE)
+    if blood_match:
+        blood_type_en = blood_match.group(1)
     return {
         'name': name,
         'name_ar': arabic_name,
