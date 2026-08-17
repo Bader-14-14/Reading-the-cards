@@ -75,6 +75,19 @@ def test_license_export_order_matches_card_order(tmp_path):
 
     rows = list(load_workbook(output).active.iter_rows(values_only=True))
     assert [row[0] for row in rows] == [
+        "القيمة",
+        "رخصة سياقة",
+        "محمد سليم محمد نسيم",
+        "2572312086",
+        "2572312086",
+        "نقل ثقيل",
+        "2011/03/05",
+        "1988/08/08",
+        "الهند",
+        "2030/07/31",
+        "+B",
+    ]
+    assert [row[1] for row in rows] == [
         "الحقل",
         "نوع البطاقة",
         "الاسم",

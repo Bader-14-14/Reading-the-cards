@@ -51,12 +51,17 @@ def create_word(data: dict, out_path: str, language: str = 'ar') -> str:
     doc.add_heading('Document Reading Results' if language.lower().startswith('en') else 'نتائج قراءة الوثيقة', level=1)
     table = doc.add_table(rows=1, cols=2)
     hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Field' if language.lower().startswith('en') else 'الحقل'
-    hdr_cells[1].text = 'Value' if language.lower().startswith('en') else 'القيمة'
+    english = language.lower().startswith('en')
+    hdr_cells[0].text = 'Field' if english else 'القيمة'
+    hdr_cells[1].text = 'Value' if english else 'الحقل'
     for k, v in _display_fields(data, language):
         row_cells = table.add_row().cells
-        row_cells[0].text = str(k)
-        row_cells[1].text = str(v)
+        if english:
+            row_cells[0].text = str(k)
+            row_cells[1].text = str(v)
+        else:
+            row_cells[0].text = str(v)
+            row_cells[1].text = str(k)
     doc.save(out_path)
     return out_path
 
@@ -65,9 +70,10 @@ def create_excel(data: dict, out_path: str, language: str = 'ar') -> str:
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     wb = Workbook()
     ws = wb.active
-    ws.append(['Field', 'Value'] if language.lower().startswith('en') else ['الحقل', 'القيمة'])
+    english = language.lower().startswith('en')
+    ws.append(['Field', 'Value'] if english else ['القيمة', 'الحقل'])
     for k, v in _display_fields(data, language):
-        ws.append([k, v])
+        ws.append([k, v] if english else [v, k])
     wb.save(out_path)
     return out_path
 
