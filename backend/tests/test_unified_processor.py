@@ -34,6 +34,8 @@ def test_license_parser_fields_are_independent_from_identity_tables():
     assert parsed["id_number"] == "2572312086"
     assert parsed["license_type"] == "Heavy Transport"
     assert parsed["issue_date"] == "05/03/2011"
+    assert parsed["dob"] == "08/08/1988"
+    assert parsed["expiry"] == "31/07/2030"
     assert parsed["blood_type"] == "B+"
 
 

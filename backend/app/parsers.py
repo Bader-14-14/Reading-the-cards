@@ -28,6 +28,23 @@ def normalize_digits(value: str) -> str:
     return (value or "").translate(_ARABIC_DIGITS)
 
 
+def _format_license_date(value: str, language: str) -> str:
+    value = normalize_digits(value).strip()
+    match = re.fullmatch(r"(\d{1,4})[/-](\d{1,2})[/-](\d{1,4})", value)
+    if not match:
+        return value
+    first, second, third = match.groups()
+    if len(first) == 4:
+        year, month, day = first, second.zfill(2), third.zfill(2)
+    else:
+        day, month, year = first.zfill(2), second.zfill(2), third
+        if len(year) == 2:
+            year = f"20{year}"
+    if language.lower().startswith("en"):
+        return f"{day}/{month}/{year}"
+    return f"{year}/{month}/{day}"
+
+
 def _normalize_ocr_line(value: str) -> str:
     value = re.sub(r"[\u200b-\u200f\ufeff]", "", value or "")
     return re.sub(r"\s+", " ", value).strip()
@@ -340,7 +357,7 @@ def parse_license(text: str, language: str = "ar") -> Dict[str, str]:
         return normalize_digits(match.group(0)) if match else ""
 
     def date(labels: list[str]) -> str:
-        return _extract_labeled_date(text, labels)
+        return _format_license_date(_extract_labeled_date(text, labels), language)
 
     arabic_name = labeled(["الاسم", "اسم حامل الرخصة"])
     english_name = ""
